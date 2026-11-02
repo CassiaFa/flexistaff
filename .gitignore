@@ -1,0 +1,21 @@
+# Données
+dataset/
+
+# Sorties d'entraînement et modèles (enregistrés dans MLflow)
+runs/
+mlruns/
+*.pt
+*.onnx
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Fichiers
+draft.md
