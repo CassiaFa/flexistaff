@@ -2,6 +2,7 @@
   <img src="./static/logo_white.png" alt="FlexiStaff logo" width="450">
 </div>
 
+---
 
 Cas pratique sur 3 jours pour la formation **Développeur IA** (École IA Brest - ISEN Ouest).
 
