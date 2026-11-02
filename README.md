@@ -1,6 +1,5 @@
 <div align="center">
   <img src="./static/logo_white.png" alt="FlexiStaff logo" width="450">
-  <h1>FlexiStaff</h1>
 </div>
 
 
