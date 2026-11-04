@@ -1,5 +1,16 @@
+<!-- Alternate logo depending of darkmode on/off -->
+<!-- Markdown command (without center image) -->
+<!-- 
+![logo light mode](./static/logo.png#gh-ligh-mode-only)
+![logo light mode](./static/logo_white.png#gh-dark-mode-only) 
+-->
+
+<!-- HTML version with centered logo -->
 <div align="center">
-  <img src="./static/logo_white.png" alt="FlexiStaff logo" width="450">
+  <picture> 
+    <source media="(prefers-color-scheme: dark)" srcset="./static/logo_white.png">
+    <img src="./static/logo.png" alt="FlexiStaff logo" width="450">
+  </picture>
 </div>
 
 ---
