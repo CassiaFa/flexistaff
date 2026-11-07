@@ -17,7 +17,7 @@
 
 Cas pratique sur 3 jours pour la formation **Développeur IA** (École IA Brest - ISEN Ouest).
 
-Votre mission : Contribuer au développement d'une application qui permet de **photographier un planning**, d'en **extrait les créneaux** et les **propose à l'ajout dans un agenda partagé** (CalDAV).
+Votre mission : contribuer au développement d'une application qui permet de **photographier un planning**, d'en **extraire les créneaux** et de les **proposer à l'ajout dans un agenda partagé** (CalDAV).
 
 ```
  CVAT   →   YOLO   →   OCR   →   Parsing   →   CalDAV
@@ -42,39 +42,44 @@ FlexiStaff est une agence d'intérim (logistique, santé, BTP) : 12 agences, 340
 | Jour | Au programme | Livrables |
 |---|---|---|
 | **J1** | Labellisation (CVAT), préparation du dataset, premier entraînement YOLO **tracé dans MLflow** | Guide de labellisation, dataset exporté, premier run MLflow |
-| **J2** | Évaluation, amélioration, comparaison des runs, registre de modèles, export ONNX | 2 runs comparés, modèle enregistré, `best.onnx` |
+| **J2** | Évaluation, amélioration, comparaison des runs, registre de modèles, export ONNX | 2 runs comparés, modèle ONNX enregistré (alias « champion ») |
 | **J3** | Application CalEvent : OCR, parsing, publication CalDAV | Pipeline de bout en bout, démonstration |
 
 ## Infrastructure
 
 ### Les services déployés
 
-Les services tournent sur une VM fournie par l'intervenant. Son adresse (`<IP_VM>`) et vos identifiants vous sont remis en cours.
+Les services tournent sur une VM fournie par l'intervenant. Son adresse (`<IP_VM>`) vous est donnée en cours ; vos identifiants sont sur votre profil du portail.
 
 | Service | Rôle | Port | URL |
 |---|---|---|---|
+| Portail | Connexion unique, identifiants, accès aux outils | 80 | `http://<IP_VM>/` |
 | CVAT | Annotation des images | 8080 | `http://<IP_VM>:8080` |
-| MLflow | Suivi des entraînements, registre de modèles | 5000 | `http://<IP_VM>:5000` |
+| MLflow | Suivi des entraînements, registre de modèles (protégé par le portail) | 5000 | `http://<IP_VM>:5000` |
 | RustFS (console) | Stockage S3, interface web | 9001 | `http://<IP_VM>:9001` |
 | RustFS (API) | Stockage S3 | 9000 | `http://<IP_VM>:9000` |
 | Radicale | Serveur CalDAV | 5232 | `http://<IP_VM>:5232/.web/` |
 | CalEvent | Backend de l'application (sur votre poste) | 8000 | `http://localhost:8000` |
 
-Vous pouvez tester la connexion aux service :
+Vous pouvez tester la connexion aux services :
 
 ```bash
+curl -I http://<IP_VM>/                # Portail
 curl -I http://<IP_VM>:8080            # CVAT
-curl    http://<IP_VM>:5000/health     # MLflow
+curl    http://<IP_VM>:5000/health     # MLflow -> 401 (identifiants requis)
+curl    http://<IP_VM>:9000/health     # RustFS -> {"status":"ok",...}
 curl -I http://<IP_VM>:5232/.web/      # Radicale
 ```
+
+Une réponse, même un code 302 ou 401, prouve que le service est joignable.
 
 > **Ne committez jamais d'identifiants** (mots de passe, clés) dans ce dépôt.
 
 ### Portail de formation
 
-Afin de vous faciliter l'accès aux différents service, un portail a été mis en place qui regroupe des accès directe aux différents services. Un identifiant et un mot de passe unique vous permettrons de vous connecter à chaque service qui le demande.
+Afin de vous faciliter l'accès aux différents services, un portail a été mis en place : il regroupe des accès directs à chacun d'eux. Un identifiant et un mot de passe uniques vous permettront de vous connecter à chaque service qui le demande.
 
-Le portail vous permet également de vous organiser en équipe, et regroupes les inforamtions nécessaire pour la connexion de vos entraînement avec mlflow.
+Le portail vous permet également de vous organiser en équipe, et regroupe les informations nécessaires pour connecter vos entraînements à MLflow.
 
 ## Organisation du travail
 
@@ -114,7 +119,7 @@ git push
 
 ### Jour 1 : labelliser, entraîner, tracer
 
-- CVAT : choisir l'organisation **FlexiStaff** (en haut à droite), pas l'espace personnel pour voir les tâches de labellisation.
+- CVAT : choisir l'organisation **FlexiStaff** (en haut à droite), et non l'espace personnel, pour voir les tâches de labellisation.
 - Décidez d'abord *ensemble* des classes et des règles de tracé, puis écrivez le guide de labellisation.
 - Export CVAT au format YOLO, puis découpage `train` / `val` (≈ 80 / 20) :
 
@@ -139,24 +144,38 @@ names:
 
 **Premier entraînement, tracé dans MLflow dès le jour 1 :**
 
-> **⚠️** Adapter les noms de squad (<squad_A>, <A>, etc...) en fonction de votre équipe, membre, etc ...
+Installation : `pip install ultralytics mlflow onnx onnxruntime`. MLflow est protégé par le portail : téléchargez `identifiants-<login>.json` depuis votre profil et déposez-le dans Colab. `<squad>` est le nom de votre équipe en minuscules avec des tirets (`team-rocket`, `team-magma`, `team-aqua`).
 
 ```python
+import json, os
+import onnx
 import mlflow
 from ultralytics import YOLO
 
-mlflow.set_tracking_uri("http://<IP_VM>:5000")
-mlflow.set_experiment("flexistaff_<squad_A>")
+creds = json.load(open("identifiants-<login>.json"))["mlflow"]
+os.environ["MLFLOW_TRACKING_USERNAME"] = creds["username"]
+os.environ["MLFLOW_TRACKING_PASSWORD"] = creds["password"]
+
+mlflow.set_tracking_uri(creds["tracking_uri"])
+mlflow.set_experiment("flexistaff_<squad>")
 
 model = YOLO("yolov8s.pt")
 
-with mlflow.start_run("<membre>_<version>"):
-    mlflow.set_tags({"squad": "<A>", "dataset": "<version_dataset>"})
+with mlflow.start_run(run_name="<membre>_<version>"):
+    mlflow.set_tags({"squad": "<squad>", "dataset": "<version_dataset>"})
     mlflow.log_params({"model": "yolov8s", "epochs": 50, "imgsz": 640})
     res = model.train(data="data.yaml", epochs=50, imgsz=640)
     mlflow.log_metric("mAP50", res.box.map50)
-    mlflow.log_artifact("runs/detect/train/weights/best.pt")
+
+    best_pt = model.trainer.best    # runs/detect/train*/weights/best.pt
+    mlflow.log_artifact(str(best_pt))
+
+    # Export ONNX, rangé dans le run : c'est le format que charge l'application
+    onnx_path = YOLO(best_pt).export(format="onnx", imgsz=640)
+    mlflow.onnx.log_model(onnx.load(onnx_path), name="onnx", save_as_external_data=False)
 ```
+
+> **⚠️** Le fichier d'identifiants contient vos mots de passe : ne le committez jamais (il est exclu par le `.gitignore`).
 
 Interface MLflow : `http://<IP_VM>:5000`. Nommez vos runs `<membre>_<version>` (ex. `toto_v1`). La ligne de commande `yolo detect train` ne trace rien dans MLflow : utilisez le code Python.
 
@@ -173,12 +192,17 @@ Partez de votre run `<membre>_v1` comme référence : chaque amélioration (`v2`
 
 Le **rappel** est la métrique qui compte pour nous : une cellule oubliée est un créneau perdu.
 
-Enregistrez le modèle exporté dans le run MLflow correspondant :
+Chaque run contient déjà son modèle ONNX. Enregistrez celui du meilleur run dans le registre, avec l'alias `champion` :
 
 ```python
-with mlflow.start_run(run_id="<RUN_ID>"):
-    mlflow.log_artifact("runs/detect/train/weights/best.onnx")
+from mlflow import MlflowClient
+
+NAME = "flexistaff_<squad>"
+mv = mlflow.register_model("runs:/<RUN_ID>/onnx", NAME)
+MlflowClient().set_registered_model_alias(NAME, "champion", mv.version)
 ```
+
+> **⚠️** Ne rouvrez pas un run terminé avec `mlflow.start_run(run_id=...)` : MLflow réécrit son heure de fin et sa durée devient fausse.
 
 ### Jour 3 : OCR parsing et intégration
 

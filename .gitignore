@@ -1,5 +1,6 @@
 # Données
-dataset/
+dataset/*
+!dataset/.gitkeep
 
 # Sorties d'entraînement et modèles (enregistrés dans MLflow)
 runs/
@@ -9,6 +10,7 @@ mlruns/
 
 # Secrets
 .env
+identifiants-*.json
 
 # Python
 __pycache__/
