@@ -41,9 +41,9 @@ FlexiStaff est une agence d'intérim (logistique, santé, BTP) : 12 agences, 340
 
 | Jour | Au programme | Livrables |
 |---|---|---|
-| **J1** | Labellisation (CVAT), préparation du dataset, premier entraînement YOLO **tracé dans MLflow** | Guide de labellisation, dataset exporté, premier run MLflow |
-| **J2** | Évaluation, amélioration, comparaison des runs, registre de modèles, export ONNX | 2 runs comparés, modèle ONNX enregistré (alias « champion ») |
-| **J3** | Application CalEvent : OCR, parsing, publication CalDAV | Pipeline de bout en bout, démonstration |
+| **J1** | Labellisation (CVAT), préparation du dataset, premier entraînement YOLO **tracé dans MLflow** | Guide de labellisation, dataset exporté, premier run MLflow, premier modèle enregistré (« champion ») |
+| **J2** | Test OCR sur le champion, évaluation, amélioration, challengers comparés au champion, promotion | Test OCR, challenger(s) comparé(s), promotion justifiée |
+| **J3** | Parsing de la sortie OCR, publication CalDAV, démo dans l'application CalEvent | Parser testé, événements publiés sans doublon, démonstration |
 
 ## Infrastructure
 
@@ -59,7 +59,7 @@ Les services tournent sur une VM fournie par l'intervenant. Son adresse (`<IP_VM
 | RustFS (console) | Stockage S3, interface web | 9001 | `http://<IP_VM>:9001` |
 | RustFS (API) | Stockage S3 | 9000 | `http://<IP_VM>:9000` |
 | Radicale | Serveur CalDAV | 5232 | `http://<IP_VM>:5232/.web/` |
-| CalEvent | Backend de l'application (sur votre poste) | 8000 | `http://localhost:8000` |
+| CalEvent | Application de démonstration (jour 3, ouverte depuis le portail) | 8000 | `http://<IP_VM>:8000` (mobile : `/app`) |
 
 Vous pouvez tester la connexion aux services :
 
@@ -94,7 +94,7 @@ flexistaff
 ├── ai_training/   # Votre code d'entraînement (notebooks, scripts…)
 ├── dataset/       # Votre dataset local (non versionné, voir .gitignore)
 ├── OCR/           # Votre code OCR et parsing
-├── .gitignore           
+├── .gitignore
 └── README.md
 ```
 
@@ -165,7 +165,7 @@ with mlflow.start_run(run_name="<membre>_<version>"):
     mlflow.set_tags({"squad": "<squad>", "dataset": "<version_dataset>"})
     mlflow.log_params({"model": "yolov8s", "epochs": 50, "imgsz": 640})
     res = model.train(data="data.yaml", epochs=50, imgsz=640)
-    mlflow.log_metric("mAP50", res.box.map50)
+    mlflow.log_metrics({"mAP50": res.box.map50, "precision": res.box.mp, "recall": res.box.mr})
 
     best_pt = model.trainer.best    # runs/detect/train*/weights/best.pt
     mlflow.log_artifact(str(best_pt))
@@ -175,24 +175,13 @@ with mlflow.start_run(run_name="<membre>_<version>"):
     mlflow.onnx.log_model(onnx.load(onnx_path), name="onnx", save_as_external_data=False)
 ```
 
+> **Pourquoi ONNX ?** `best.pt` sert à entraîner, ONNX à déployer : `onnxruntime` suffit pour l'utiliser (ni PyTorch ni Ultralytics), le même fichier tourne sur CPU, GPU ou mobile, et les noms de vos classes sont rangés dedans. Contreparties : taille d'image fixée à l'export, post-traitement (seuil, suppression des doublons) à refaire côté application.
+
 > **⚠️** Le fichier d'identifiants contient vos mots de passe : ne le committez jamais (il est exclu par le `.gitignore`).
 
 Interface MLflow : `http://<IP_VM>:5000`. Nommez vos runs `<membre>_<version>` (ex. `toto_v1`). La ligne de commande `yolo detect train` ne trace rien dans MLflow : utilisez le code Python.
 
-
-### Jour 2 : évaluer, améliorer, exporter
-
-Partez de votre run `<membre>_v1` comme référence : chaque amélioration (`v2`, `v3`, ...) est un nouveau run, à comparer dans MLflow (*Compare*). Enregistrez aussi la précision et le rappel, pas seulement le mAP.
-
-| Métrique | Question | Trop bas = |
-|---|---|---|
-| Précision | Parmi mes détections, combien sont justes ? | fausses alarmes |
-| Rappel | Parmi les vrais objets, combien ai-je trouvés ? | oublis |
-| mAP50 | Précision moyenne à IoU ≥ 0,5 | - |
-
-Le **rappel** est la métrique qui compte pour nous : une cellule oubliée est un créneau perdu.
-
-Chaque run contient déjà son modèle ONNX. Enregistrez celui du meilleur run dans le registre, avec l'alias `champion` :
+**Premier champion (fin du jour 1) :** comparez les runs `<membre>_v1` de la squad (rappel d'abord, mAP50 pour départager) ; le chef enregistre le meilleur dans le registre avec l'alias `champion` :
 
 ```python
 from mlflow import MlflowClient
@@ -204,11 +193,43 @@ MlflowClient().set_registered_model_alias(NAME, "champion", mv.version)
 
 > **⚠️** Ne rouvrez pas un run terminé avec `mlflow.start_run(run_id=...)` : MLflow réécrit son heure de fin et sa durée devient fausse.
 
-### Jour 3 : OCR parsing et intégration
+### Jour 2 : évaluer, améliorer, comparer, promouvoir
 
-Interface : `http://localhost:8000` · API : `http://localhost:8000/docs` · Comparaison : `http://localhost:8000/compare-view`
+**Tester l'OCR sur le champion :** notebook `ressources/test_ocr_champion.ipynb` (EasyOCR sur les zones détectées par `flexistaff_<squad>@champion`, sur un jeu de test commun téléchargé automatiquement). Regardez quel texte chaque classe donne et commencez à réfléchir au parsing.
 
-Parsing défensif : corriger les confusions OCR (`O→0`, `I→1`, `Z→2`) **dans les chiffres uniquement**, tolérer plusieurs formats d'heure, croiser avec l'en-tête de date, baisser la confiance à chaque correction.
+Chaque amélioration (`v2`, `v3`, ...) est un nouveau run, à comparer dans MLflow (*Compare*).
+
+| Métrique | Question | Trop bas = |
+|---|---|---|
+| Précision | Parmi mes détections, combien sont justes ? | fausses alarmes |
+| Rappel | Parmi les vrais objets, combien ai-je trouvés ? | oublis |
+| mAP50 | Précision moyenne à IoU ≥ 0,5 | - |
+
+Le **rappel** est la métrique qui compte pour nous : une cellule oubliée est un créneau perdu.
+
+**Challenger et champion :** enregistrez un run prometteur comme `challenger`, comparez-le au champion (métriques, puis notebook OCR avec `ALIAS = "challenger"`). Critère de promotion : rappel d'abord, mAP50 pour départager, coup d'œil à l'OCR ; le chef décide.
+
+```python
+client = MlflowClient()
+mv = mlflow.register_model("runs:/<RUN_ID>/onnx", NAME)
+client.set_registered_model_alias(NAME, "challenger", mv.version)
+
+# Promotion, si le challenger l'emporte
+v = client.get_model_version_by_alias(NAME, "challenger").version
+client.set_registered_model_alias(NAME, "champion", v)
+client.delete_registered_model_alias(NAME, "challenger")
+```
+
+### Jour 3 : du texte lu à l'agenda
+
+Point de départ : le `ocr_champion.json` du jour 2. Notebook `ressources/parsing_jour3.ipynb` : vous écrivez le parser (fonctions à compléter, cas de test fournis) ; la publication est fournie par `ressources/caldav_publier.py`.
+
+Parsing défensif : corriger les confusions OCR (`O→0`, `I→1`, `Z→2`) **dans les chiffres uniquement**, tolérer plusieurs formats d'heure, rattacher chaque créneau à sa date par la géométrie (case, colonne, en-tête), baisser la confiance à chaque correction.
+
+```json
+{"title": "M. Bernard - Entrepôt Nord", "date": "2026-03-12", "start_time": "14:00",
+ "end_time": "18:00", "location": null, "confidence": 0.62}
+```
 
 | Confiance | Comportement |
 |---|---|
@@ -216,7 +237,19 @@ Parsing défensif : corriger les confusions OCR (`O→0`, `I→1`, `Z→2`) **da
 | 0,5 – 0,8 | à vérifier |
 | < 0,5 | non proposé |
 
-Événement CalDAV : `UID` unique, fuseau explicite (`TZID=Europe/Paris`), vérification anti-doublon avant insertion.
+Publication dans l'agenda `calevent` de la squad (UID stable, `TZID=Europe/Paris`, anti-doublon) :
+
+```python
+from caldav_publier import publier, charger_identifiants
+
+ident = charger_identifiants("identifiants-<login>.json")  # clé « caldav » : compte de la squad
+publier(evenements, **ident, dry_run=True)              # simulation d'abord
+publier(evenements, **ident)                            # statuts : créé / déjà présent / erreur
+```
+
+Démo : l'application CalEvent (`http://<IP_VM>:8000`, mobile `/app`, ouverte depuis le portail) charge le `champion` de chaque squad depuis MLflow. Donnez à l'intervenant la correspondance de vos classes vers ses rôles (`month_header`, `date_cell`, `event`), ex. `jour=date_cell,creneau=event`.
+
+**Bonus recommandé : mettre votre champion en production.** Le dossier `ressources/api_modele/` (à copier dans `livrables/`) contient un service FastAPI à compléter (6 TODO) qui expose `flexistaff_<squad>@champion` : `/health`, `/predict` (image → détections JSON), `/reload` (relit l'alias après une promotion ou un retour arrière) et, en option, `/parse` (votre parser). Inférence ONNX avec `onnxruntime`, sans torch. Lancement : `uvicorn api:app --port 8001`, puis `http://localhost:8001/docs`. Dans le rapport : latence (moyenne, p95, `mesurer_latence.py`), mémoire, taille de l'image Docker, pourquoi ONNX.
 
 ## Dépannage rapide
 
@@ -228,6 +261,7 @@ Parsing défensif : corriger les confusions OCR (`O→0`, `I→1`, `Z→2`) **da
 | Bon score sur `train`, mauvais sur `val` | Surapprentissage : plus de données ou d'augmentation |
 | CalDAV 401 | Identifiants incorrects, tester sur l'interface web de Radicale |
 | Événements décalés d'1 h ou 2 h | Fuseau manquant : `TZID=Europe/Paris` |
+| CalEvent ne propose aucun événement | Transmettre la correspondance de vos classes à l'intervenant |
 
 ## Ressources
 
