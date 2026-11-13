@@ -121,7 +121,7 @@ git push
 
 - CVAT : choisir l'organisation **FlexiStaff** (en haut à droite), et non l'espace personnel, pour voir les tâches de labellisation.
 - Décidez d'abord *ensemble* des classes et des règles de tracé, puis écrivez le guide de labellisation.
-- Export CVAT au format YOLO, puis découpage `train` / `val` (≈ 80 / 20) :
+- Export CVAT au format YOLO (**le chef** exporte la tâche entière ; les autres membres ne peuvent exporter que leur job), puis découpage `train` / `val` (≈ 80 / 20) :
 
 ```
 dataset/
@@ -231,6 +231,8 @@ Parsing défensif : corriger les confusions OCR (`O→0`, `I→1`, `Z→2`) **da
  "end_time": "18:00", "location": null, "confidence": 0.62}
 ```
 
+**Plannings à codes** (équipe × jours, cellules `M06`, `N08`, `RH`, `MAL`...) : la classe `agent` (la personne, lue sur la ligne) se rattache au rôle `resource_header` via `CLASS_MAP`, la date se prend par la **colonne**, et une table des codes (`CODES`, fonction `traduire_code`) donne titre et horaires. Un repos devient une journée entière, une nuit finit le lendemain, `MAL` devient « Absence » (donnée de santé : jamais dans un agenda partagé). Champs optionnels de l'événement : `person`, `all_day`, `overnight`. En-tête sur deux mois : les jours qui repartent à 1 sont ceux du mois suivant.
+
 | Confiance | Comportement |
 |---|---|
 | ≥ 0,8 | pré-coché |
@@ -247,7 +249,7 @@ publier(evenements, **ident, dry_run=True)              # simulation d'abord
 publier(evenements, **ident)                            # statuts : créé / déjà présent / erreur
 ```
 
-Démo : l'application CalEvent (`http://<IP_VM>:8000`, mobile `/app`, ouverte depuis le portail) charge le `champion` de chaque squad depuis MLflow. Donnez à l'intervenant la correspondance de vos classes vers ses rôles (`month_header`, `date_cell`, `event`), ex. `jour=date_cell,creneau=event`.
+Démo : l'application CalEvent (`http://<IP_VM>:8000`, mobile `/app`, ouverte depuis le portail) charge le `champion` de chaque squad depuis MLflow. Donnez à l'intervenant la correspondance de vos classes vers ses rôles (`month_header`, `date_cell`, `event`), ex. `jour=date_cell,creneau=event` (planning à codes : `agent=resource_header`). La démo propose un sélecteur « Personnes », la case « Journée entière », le choix de l'agenda par événement (« Envoyer dans » : votre agenda personnel par défaut) et un bouton « Prendre une photo ».
 
 **Bonus recommandé : mettre votre champion en production.** Le dossier `ressources/api_modele/` (à copier dans `livrables/`) contient un service FastAPI à compléter (6 TODO) qui expose `flexistaff_<squad>@champion` : `/health`, `/predict` (image → détections JSON), `/reload` (relit l'alias après une promotion ou un retour arrière) et, en option, `/parse` (votre parser). Inférence ONNX avec `onnxruntime`, sans torch. Lancement : `uvicorn api:app --port 8001`, puis `http://localhost:8001/docs`. Dans le rapport : latence (moyenne, p95, `mesurer_latence.py`), mémoire, taille de l'image Docker, pourquoi ONNX.
 
