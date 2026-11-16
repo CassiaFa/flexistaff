@@ -1,5 +1,5 @@
-# Team Rocket : classes du guide de labellisation v1.0 (16/11/2026), dans l'ordre du tableau du guide.
-# À VÉRIFIER avant la fusion : l'ordre des `names` de leur data.yaml doit être EXACTEMENT celui-ci.
+# Team Rocket : classes du guide de labellisation v1.0 (16/11/2026), dans l'ordre des labels de leur projet CVAT
+# (identifiants 17 à 20, vérifié le 17/11 sur le Raw des labels).
 #
 # Le guide demande des boîtes serrées sur le TEXTE (pas la case ni la bande colorée) : on part donc des
 # éléments `text` du générateur, regroupés quand une information tient sur plusieurs lignes.
