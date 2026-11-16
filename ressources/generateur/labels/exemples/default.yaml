@@ -1,0 +1,7 @@
+# Reproduit exactement les 5 classes de generate_calendar_dataset.py (dataset v2)
+classes:
+  calendar:       [calendar]
+  month_header:   [month_header]
+  day_header_row: [day_header_row]
+  date_cell:      [date_cell]
+  event:          [event]

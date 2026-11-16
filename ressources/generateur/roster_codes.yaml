@@ -1,0 +1,28 @@
+# Codes horaires simulés pour les plannings à codes (doc_type: code_roster).
+#
+# Ce fichier sert à la fois :
+#   - au générateur : quels codes écrire, à quelle fréquence, avec quelle couleur ;
+#   - au parseur    : traduire un code lu par l'OCR en horaires / repos.
+# Il est copié dans chaque dataset généré (roster_codes.yaml).
+#
+# Champs :
+#   label     intitulé lisible
+#   category  work | training | rest | leave
+#             (leave = congés / arrêts, tirés par blocs de plusieurs jours)
+#   start/end horaires HH:MM (absents pour rest / leave) ; end < start = nuit
+#   color     surlignage (#RRGGBB) ou null pour aucun
+#   weight    fréquence relative de tirage (ignoré pour leave)
+
+codes:
+  G03: {label: "Garde jour",            category: work,     start: "07:00", end: "19:00", color: "#FFE699", weight: 5}
+  G05: {label: "Garde jour courte",     category: work,     start: "08:00", end: "18:00", color: "#FFD966", weight: 2}
+  M06: {label: "Matin",                 category: work,     start: "06:00", end: "14:00", color: "#C6E0B4", weight: 3}
+  S14: {label: "Soir",                  category: work,     start: "14:00", end: "22:00", color: "#F8CBAD", weight: 3}
+  J09: {label: "Journée",               category: work,     start: "09:00", end: "17:00", color: "#DDEBF7", weight: 2}
+  N08: {label: "Nuit",                  category: work,     start: "20:00", end: "08:00", color: "#8EA9DB", weight: 3}
+  FOR: {label: "Formation",             category: training, start: "09:00", end: "17:00", color: "#E4DFEC", weight: 0.5}
+  RH:  {label: "Repos hebdomadaire",    category: rest,     color: "#D9D9D9", weight: 3}
+  RC:  {label: "Repos compensateur",    category: rest,     color: "#EDEDED", weight: 1}
+  RF:  {label: "Repos férié",           category: rest,     color: "#FCE4D6", weight: 0.7}
+  CA:  {label: "Congé annuel",          category: leave,    color: "#A9D08E"}
+  MAL: {label: "Arrêt maladie",         category: leave,    color: "#FF9999"}

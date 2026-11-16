@@ -1,0 +1,25 @@
+# Team Rocket : classes du guide de labellisation v1.0 (16/11/2026), dans l'ordre du tableau du guide.
+# À VÉRIFIER avant la fusion : l'ordre des `names` de leur data.yaml doit être EXACTEMENT celui-ci.
+#
+# Le guide demande des boîtes serrées sur le TEXTE (pas la case ni la bande colorée) : on part donc des
+# éléments `text` du générateur, regroupés quand une information tient sur plusieurs lignes.
+#   Titre_calendrier -> titre du planning (« NOVEMBRE 2027 », « PLANNING SEMAINE 43 ») ; approximation :
+#                       en grille de mois, la boîte peut couvrir le bandeau du titre
+#   Date_case        -> numéro du jour ; en tableau, jour + date de l'en-tête ensemble (« L » + « 09/11 ») ;
+#                       les en-têtes génériques sans date (« Lun » d'une grille de mois) ne sont pas annotés
+#   Ressource        -> nom ou poste en tête de ligne (les deux lignes « Rousseau / Karim » en une boîte)
+#   Evenement        -> texte d'un créneau : horaire + intitulé/lieu, ou code (M06, RH...) ; un par créneau
+classes:
+  Titre_calendrier: [month_header]
+  Date_case:
+    roles: [text]
+    where: {kind: [date, day_name]}
+    group_by: [date]
+  Ressource:
+    roles: [text]
+    where: {kind: resource}
+    group_by: [resource]
+  Evenement:
+    roles: [text]
+    where: {kind: [event_time, event_title, event_site, code]}
+    group_by: [row, col, title]

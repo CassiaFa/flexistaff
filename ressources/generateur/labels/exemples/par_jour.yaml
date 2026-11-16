@@ -1,0 +1,18 @@
+# Exemple : on n'annote PAS chaque événement séparément.
+#  - jour       : une boîte par date. En grille mensuelle c'est la case du jour ;
+#                 en planning hebdo, la colonne (ou ligne) entière du jour.
+#  - semaine    : une boîte par ligne de la grille mensuelle.
+#  - heure      : seulement le texte des horaires.
+#  - titre_mois : inchangé.
+classes:
+  jour:
+    roles: [date_cell, day_name_cell, event, empty_cell]
+    group_by: [date]
+  semaine:
+    roles: [date_cell, out_month_cell]
+    where: {doc_type: month_grid}
+    group_by: [row]
+  heure:
+    roles: [text]
+    where: {kind: event_time}
+  titre_mois: [month_header]

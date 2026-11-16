@@ -1,0 +1,11 @@
+# Exemple pour les plannings à codes (--roster-ratio > 0)
+classes:
+  calendar:   [calendar]
+  date_cell:  [date_cell]
+  agent:      [resource_header]
+  code:       [event]
+  ligne_agent:                     # toute la ligne d'un agent, en une boîte
+    roles: [resource_header, event, empty_cell]
+    where: {doc_type: code_roster}
+    group_by: [resource]
+  legende:    [legend]

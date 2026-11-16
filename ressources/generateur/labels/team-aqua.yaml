@@ -1,0 +1,28 @@
+# Team Aqua : classes du guide de labellisation v1.0 (16/11/2026), dans l'ordre des identifiants CVAT
+# (9, 10, 11, 12, 13, 16), qui est en principe l'ordre de leur data.yaml.
+# À VÉRIFIER avant la fusion : l'ordre des `names` de leur data.yaml doit être EXACTEMENT celui-ci.
+#
+# Correspondance avec les éléments des plannings générés (rôles et attributs : README du générateur) :
+#   Planning                 -> le calendrier entier (bandeau + grille)
+#   Entreprise               -> sous-titre « <ENTREPRISE>  —  Personnel intérimaire » des plannings hebdo
+#                               (approximation : le générateur écrit le nom et la mention sur la même
+#                               ligne, la boîte couvre la ligne entière ; absent des grilles de mois et
+#                               des plannings à codes, comme dans la réalité)
+#   ref_semaine_planning     -> titre du planning (« PLANNING SEMAINE 43 », « Planning du 25 mai 2026 »,
+#                               « Mars 2027 »)
+#   employe_poste            -> case du nom (ou du poste) en tête de ligne
+#   horaire_lieu_jour_tache  -> une boîte par jour et par employé, case vide comprise (règle 5 du guide) ;
+#                               en grille de mois : chaque événement (pas de ligne d'employé)
+#   semaine_employe          -> la ligne entière d'un employé : son nom + toutes ses cases de la semaine
+classes:
+  Planning: [calendar]
+  Entreprise:
+    roles: [text]
+    where: {kind: subtitle}
+  ref_semaine_planning: [month_header]
+  employe_poste: [resource_header]
+  horaire_lieu_jour_tache: [event, empty_cell]
+  semaine_employe:
+    roles: [resource_header, event, empty_cell]
+    where: {doc_type: [week_planning, code_roster]}
+    group_by: [resource]

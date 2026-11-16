@@ -1,0 +1,25 @@
+# Team Magma : classes du guide de labellisation (16/11/2026), dans l'ordre du tableau du guide.
+# À VÉRIFIER avant la fusion : l'ordre des `names` de leur data.yaml doit être EXACTEMENT celui-ci.
+#
+#   Titre        -> titre du planning (« Novembre 2025 », « PLANNING SEMAINE 43 »)
+#   Nom          -> case du nom ou du poste en tête de ligne (forme de la case, règle 4 du guide)
+#   Date         -> en-tête de jour + date en une boîte (« Lun 2 », « L / 09/11 ») ; en grille de mois,
+#                   le numéro du jour. Approximation : boîte serrée sur le texte, pas sur la case
+#                   (un même réglage ne peut pas suivre la case dans un tableau et le numéro en grille de mois)
+#   Cellule      -> créneau avec horaire ou intitulé : case du planning hebdo, pastille de la grille de mois
+#   cellule_code -> case d'un planning à codes (J09, RH, MAL...)
+# Non annotés, comme dans le guide : cases vides, légendes, jours de la semaine seuls (« Lun » d'une
+# grille de mois, sans date).
+classes:
+  Titre: [month_header]
+  Nom: [resource_header]
+  Date:
+    roles: [text]
+    where: {kind: [date, day_name]}
+    group_by: [date]
+  Cellule:
+    roles: [event]
+    where: {doc_type: [week_planning, month_grid]}
+  cellule_code:
+    roles: [event]
+    where: {doc_type: code_roster}
