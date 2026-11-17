@@ -1,0 +1,9 @@
+# Service de modèle : volontairement SANS torch ni ultralytics (inférence ONNX seule)
+fastapi==0.111.0
+uvicorn==0.30.0
+python-multipart==0.0.9            # lecture des fichiers envoyés (UploadFile)
+onnxruntime>=1.18,<2               # inférence CPU
+opencv-python-headless>=4.8,<5     # décodage d'image, redimensionnement, NMS (version sans interface graphique)
+numpy>=1.26,<2
+mlflow-skinny>=3.0,<4              # client MLflow léger (registre + téléchargement), suffit : pas besoin de mlflow complet
+requests>=2.31                     # pour mesurer_latence.py

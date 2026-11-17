@@ -1,0 +1,6 @@
+modeles/
+__pycache__/
+*.onnx
+identifiants*.json
+credentials*.json
+.env
