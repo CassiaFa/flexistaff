@@ -215,21 +215,25 @@ def text_box(d, xy, text, font, anchor="lm", pad=3):
     return (x1 - pad, y1 - pad, x2 + pad, y2 + pad)
 
 
-def draw_banner(d, rng, fonts, text, x1, x2, y, h, hdr_bg, hdr_fg, txt):
-    """Titre du mois. Bandeau coloré ou texte nu ; retourne la boîte month_header."""
+def draw_banner(d, rng, fonts, text, x1, x2, y, h, hdr_bg, hdr_fg, txt, rec=None):
+    """Titre du mois. Bandeau coloré ou texte nu ; retourne la boîte month_header.
+    Avec rec (Recorder), le texte du titre est aussi enregistré (rôle text, kind title)."""
     size = int(h * rng.uniform(0.42, 0.56))
     text, font = fit_text(d, text, fonts.b, size, (x2 - x1) * 0.9)
     cy = y + h / 2
     if rng.random() < 0.65:
         d.rectangle([x1, y, x2, y + h], fill=hdr_bg)
-        d.text(((x1 + x2) / 2, cy), text, font=font, fill=hdr_fg, anchor="mm")
-        return (x1, y, x2, y + h)
-    if rng.random() < 0.5:
-        xy, anchor = ((x1 + x2) / 2, cy), "mm"
+        xy, anchor, fill, box = ((x1 + x2) / 2, cy), "mm", hdr_fg, (x1, y, x2, y + h)
     else:
-        xy, anchor = (x1 + 10, cy), "lm"
-    d.text(xy, text, font=font, fill=txt, anchor=anchor)
-    return text_box(d, xy, text, font, anchor, pad=6)
+        if rng.random() < 0.5:
+            xy, anchor = ((x1 + x2) / 2, cy), "mm"
+        else:
+            xy, anchor = (x1 + 10, cy), "lm"
+        fill, box = txt, None
+    d.text(xy, text, font=font, fill=fill, anchor=anchor)
+    if rec is not None and text:
+        rec.add("text", text_box(d, xy, text, font, anchor, pad=2), kind="title", parent="month_header")
+    return box or text_box(d, xy, text, font, anchor, pad=6)
 
 
 def mix(c1, c2, t):
@@ -686,7 +690,7 @@ def make_code_roster(rng, codes, days=None):
         title = rng.choice([f"Planning {rng.choice(SERVICES)} — {period}",
                             f"PLANNING {period.upper()}", f"{rng.choice(SERVICES)}  {period}"])
         rec.add("month_header", draw_banner(d, rng, fonts, title, x1, min(x2, x1 + 900),
-                                            top, title_h - 8, hdr_bg, hdr_fg, txt))
+                                            top, title_h - 8, hdr_bg, hdr_fg, txt, rec=rec))
 
     # En-tête : coin + une colonne par jour (2 lignes, cf. "L27 / S18")
     d.rectangle([x1, table_y, bx1, body_y], fill=hdr_bg, outline=grid)

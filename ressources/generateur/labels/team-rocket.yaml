@@ -1,16 +1,19 @@
 # Team Rocket : classes du guide de labellisation v1.0 (16/11/2026), dans l'ordre des labels de leur projet CVAT
 # (identifiants 17 à 20, vérifié le 17/11 sur le Raw des labels).
+# Règles vérifiées le 17/11 sur leur export CVAT (40 images, 2 706 boîtes).
 #
 # Le guide demande des boîtes serrées sur le TEXTE (pas la case ni la bande colorée) : on part donc des
 # éléments `text` du générateur, regroupés quand une information tient sur plusieurs lignes.
-#   Titre_calendrier -> titre du planning (« NOVEMBRE 2027 », « PLANNING SEMAINE 43 ») ; approximation :
-#                       en grille de mois, la boîte peut couvrir le bandeau du titre
+#   Titre_calendrier -> texte du titre (« NOVEMBRE 2027 », « PLANNING SEMAINE 43 »), sans le bandeau coloré
 #   Date_case        -> numéro du jour ; en tableau, jour + date de l'en-tête ensemble (« L » + « 09/11 ») ;
 #                       les en-têtes génériques sans date (« Lun » d'une grille de mois) ne sont pas annotés
-#   Ressource        -> nom ou poste en tête de ligne (les deux lignes « Rousseau / Karim » en une boîte)
+#   Ressource        -> nom ou poste en tête de ligne (les deux lignes « Rousseau / Karim » en une boîte) ;
+#                       en planning transposé, les en-têtes de colonnes (« Cariste », « M. Silva »)
 #   Evenement        -> texte d'un créneau : horaire + intitulé/lieu, ou code (M06, RH...) ; un par créneau
 classes:
-  Titre_calendrier: [month_header]
+  Titre_calendrier:
+    roles: [text]
+    where: {kind: title}
   Date_case:
     roles: [text]
     where: {kind: [date, day_name]}

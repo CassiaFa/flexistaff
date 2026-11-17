@@ -140,7 +140,7 @@ def make_month_grid(rng):
     rec.add("calendar", (x1, top, x2, gy2))
 
     title = f"{MOIS[month - 1].upper()} {year}" if rng.random() < 0.6 else f"{MOIS[month - 1].capitalize()} {year}"
-    rec.add("month_header", draw_banner(d, rng, fonts, title, x1, x2, top, banner_h, hdr_bg, hdr_fg, txt))
+    rec.add("month_header", draw_banner(d, rng, fonts, title, x1, x2, top, banner_h, hdr_bg, hdr_fg, txt, rec=rec))
 
     wd_y1 = top + banner_h
     abbr = rng.random() < 0.5
@@ -285,7 +285,7 @@ def make_week_planning(rng):
     banner_y, banner_h = top + 22, rng.randint(52, 70)
     banner_y2 = banner_y + banner_h
     events = []
-    rec.add("month_header", draw_banner(d, rng, fonts, title, x1, x2, banner_y, banner_h, hdr_bg, hdr_fg, txt))
+    rec.add("month_header", draw_banner(d, rng, fonts, title, x1, x2, banner_y, banner_h, hdr_bg, hdr_fg, txt, rec=rec))
 
     def draw_event(cx1, cy1, cx2, cy2, day, resource, slot, site, pos):
         fill = rng.choice(EVENT_COLORS) if color_cells else None
