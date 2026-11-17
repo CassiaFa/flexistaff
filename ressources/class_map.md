@@ -21,22 +21,26 @@ le parser.
 |---|---|
 | Team Rocket | `Titre_calendrier=month_header,Date_case=date_cell,Ressource=resource_header,Evenement=event` |
 | Team Magma | `Titre=month_header,Nom=resource_header,Date=date_cell,Cellule=event,Cellule_code=event` |
-| Team Aqua | `Planning=calendar,ref_semaine_planning=month_header,employe_poste=resource_header,horaire_lieu_jour_tache=event` |
+| Team Aqua | `Planning=calendar,ref_semaine_planning=day_header_row,employe_poste=resource_header,horaire_lieu_jour_tache=event` |
 
 Les noms de classes doivent être écrits **exactement** comme dans votre `data.yaml` (majuscules comprises).
 
 ## Cas particuliers
 
-- **Team Magma :** une classe n'a qu'un rôle. `Cellule` est lue comme `event`. En grille de mois, la case du
-  jour entière sera donc vue comme un événement, et une case vide comme un faux créneau : à surveiller au
-  parsing du J3.
-- **Team Aqua :** aucune classe ne porte la date. Le parser devra la trouver dans le texte OCR des cases.
+- **Team Magma :** une classe n'a qu'un rôle, `Cellule` est donc lue comme `event`. En grille de mois, la
+  case du jour entière est reconnue à son numéro en tête de texte : le jour vient de ce numéro, chaque ligne
+  de la case devient un événement, et une case qui ne porte que son numéro est écartée.
+- **Team Aqua :** `ref_semaine_planning` encadre la rangée des jours avec leurs dates (« LUNDI 30/12 … »).
+  Le rôle `day_header_row` fait découper cette rangée en un en-tête par date, et chaque créneau prend la
+  date de sa colonne. Les cases sans texte sont écartées. **L'année vient du titre** (« Planning du 30
+  décembre 2024 ») : encadrez-le aussi en `ref_semaine_planning`, dans la même boîte que les jours ou dans
+  une boîte à part. Sans le titre, « 30/12 » donne le jour et le mois, mais la date reste « à revoir ».
 
 ## Vérifier
 
 - **Dans MLflow :** onglet *Models*, puis `flexistaff_<squad>`. Le tag `class_map` apparaît dans la section
   *Tags* du modèle.
-- **Dans CalEvent :** après un rechargement (↻), la route `GET /models` de l'API donne, pour chaque modèle,
+- **Dans CalEvent :** après un rechargement (↻), la route `GET /api/models` de l'API donne, pour chaque modèle,
   la correspondance appliquée (`class_map`) et sa source (`class_map_source`) :
   - `mlflow` : votre tag est lu ;
   - `identité` : aucun tag n'a été trouvé, et vos classes sont prises telles quelles.
