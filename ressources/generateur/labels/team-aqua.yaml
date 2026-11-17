@@ -1,6 +1,7 @@
 # Team Aqua : classes du guide de labellisation v1.0 (16/11/2026), dans l'ordre des identifiants CVAT
 # (9, 10, 11, 12, 13, 16), qui est en principe l'ordre de leur data.yaml.
 # À VÉRIFIER avant la fusion : l'ordre des `names` de leur data.yaml doit être EXACTEMENT celui-ci.
+# Règles alignées le 17/11 sur leur export CVAT corrigé (36 images).
 #
 # Correspondance avec les éléments des plannings générés (rôles et attributs : README du générateur) :
 #   Planning                 -> le calendrier entier (bandeau + grille)
@@ -8,21 +9,32 @@
 #                               (approximation : le générateur écrit le nom et la mention sur la même
 #                               ligne, la boîte couvre la ligne entière ; absent des grilles de mois et
 #                               des plannings à codes, comme dans la réalité)
-#   ref_semaine_planning     -> titre du planning (« PLANNING SEMAINE 43 », « Planning du 25 mai 2026 »,
-#                               « Mars 2027 »)
+#   ref_semaine_planning     -> l'indication de la semaine d'un seul tenant (§ ref_semaine_planning du guide) :
+#                               grille de mois : titre + rangée des noms de jours, une boîte ;
+#                               planning hebdo : titre + rangée des jours et des dates, une boîte ;
+#                               planning transposé : le titre, et la colonne des jours et des dates à part ;
+#                               planning à codes : le titre, et la rangée d'en-têtes (jour + date) à part.
+#                               Le titre donne l'année à CalEvent (tag class_map : day_header_row).
 #   employe_poste            -> case du nom (ou du poste) en tête de ligne
 #   horaire_lieu_jour_tache  -> une boîte par jour et par employé, case vide comprise (règle 5 du guide) ;
-#                               en grille de mois : chaque événement (pas de ligne d'employé)
-#   semaine_employe          -> la ligne entière d'un employé : son nom + toutes ses cases de la semaine
+#                               grille de mois : la case du jour entière, cases grisées hors du mois comprises
+#   semaine_employe          -> la ligne entière d'un employé : son nom + toutes ses cases de la semaine ;
+#                               grille de mois : une ligne de semaine
 classes:
   Planning: [calendar]
   Entreprise:
     roles: [text]
     where: {kind: subtitle}
-  ref_semaine_planning: [month_header]
+  ref_semaine_planning:
+    - {roles: [month_header, day_name_cell], where: {doc_type: month_grid}, group_by: [doc_type]}
+    - {roles: [month_header, day_name_cell, date_cell], where: {layout: week}, group_by: [layout]}
+    - {roles: [month_header], where: {layout: [week_transposed, roster]}}
+    - {roles: [day_name_cell, date_cell], where: {layout: week_transposed}, group_by: [layout]}
+    - {roles: [date_cell], where: {layout: roster}, group_by: [layout]}
   employe_poste: [resource_header]
-  horaire_lieu_jour_tache: [event, empty_cell]
+  horaire_lieu_jour_tache:
+    - {roles: [event, empty_cell], where: {doc_type: [week_planning, code_roster]}}
+    - {roles: [date_cell, out_month_cell], where: {doc_type: month_grid}}
   semaine_employe:
-    roles: [resource_header, event, empty_cell]
-    where: {doc_type: [week_planning, code_roster]}
-    group_by: [resource]
+    - {roles: [resource_header, event, empty_cell], where: {doc_type: [week_planning, code_roster]}, group_by: [resource]}
+    - {roles: [date_cell, out_month_cell], where: {doc_type: month_grid}, group_by: [row]}
