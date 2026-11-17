@@ -15,10 +15,14 @@ boîtes deviennent quelles classes :
       heure:
         roles: [text]
         where: {kind: event_time}              # filtre sur les attributs
+      cellule:                                 # liste de règles : union des boîtes
+        - {roles: [date_cell], where: {doc_type: month_grid}}
+        - {roles: [event], where: {doc_type: week_planning}}
 
 Avec group_by, les éléments sélectionnés qui partagent les mêmes valeurs
 d'attributs sont fusionnés en un seul rectangle englobant ; ceux qui n'ont pas
-l'attribut sont ignorés. Liste des rôles et attributs : --list-roles.
+l'attribut sont ignorés. Une liste de règles (forme longue) donne à une même
+classe des rôles filtrés différemment. Liste des rôles et attributs : --list-roles.
 
 Usage :
     uv run python src/data/generate_calendar_custom.py --list-roles
@@ -430,26 +434,31 @@ def load_label_config(path):
 
     classes = []
     for name, spec in raw["classes"].items():
-        if isinstance(spec, (list, str)):
-            spec = {"roles": spec}
-        roles = spec.get("roles")
-        roles = [roles] if isinstance(roles, str) else roles
-        if not roles:
-            raise SystemExit(f"{path} : classe '{name}' sans 'roles'")
-        for r in roles:
-            if r not in ROLES:
-                raise SystemExit(f"{path} : rôle inconnu '{r}' (classe '{name}'). "
-                                 f"Rôles : {', '.join(ROLES)}")
-        where = spec.get("where") or {}
-        group_by = spec.get("group_by") or []
-        group_by = [group_by] if isinstance(group_by, str) else group_by
-        for a in list(where) + group_by:
-            if a not in ATTRS:
-                raise SystemExit(f"{path} : attribut inconnu '{a}' (classe '{name}'). "
-                                 f"Attributs : {', '.join(ATTRS)}")
-        classes.append({"name": str(name), "roles": set(roles),
-                        "where": where, "group_by": group_by})
+        # liste de règles (dictionnaires) : la classe est l'union de leurs boîtes
+        specs = spec if isinstance(spec, list) and spec and all(isinstance(x, dict) for x in spec) else [spec]
+        classes.append({"name": str(name), "rules": [parse_rule(path, name, x) for x in specs]})
     return classes
+
+
+def parse_rule(path, name, spec):
+    if isinstance(spec, (list, str)):
+        spec = {"roles": spec}
+    roles = spec.get("roles")
+    roles = [roles] if isinstance(roles, str) else roles
+    if not roles:
+        raise SystemExit(f"{path} : classe '{name}' sans 'roles'")
+    for r in roles:
+        if r not in ROLES:
+            raise SystemExit(f"{path} : rôle inconnu '{r}' (classe '{name}'). "
+                             f"Rôles : {', '.join(ROLES)}")
+    where = spec.get("where") or {}
+    group_by = spec.get("group_by") or []
+    group_by = [group_by] if isinstance(group_by, str) else group_by
+    for a in list(where) + group_by:
+        if a not in ATTRS:
+            raise SystemExit(f"{path} : attribut inconnu '{a}' (classe '{name}'). "
+                             f"Attributs : {', '.join(ATTRS)}")
+    return {"roles": set(roles), "where": where, "group_by": group_by}
 
 
 def matches(el, where):
@@ -463,18 +472,24 @@ def elements_to_boxes(elements, classes):
     """[(cls_id, x1, y1, x2, y2)] en coordonnées de l'image propre."""
     boxes = []
     for cls_id, c in enumerate(classes):
-        sel = [e for e in elements if e["role"] in c["roles"] and matches(e, c["where"])]
-        if not c["group_by"]:
-            boxes += [(cls_id, *e["box"]) for e in sel]
-            continue
-        groups = {}
-        for e in sel:
-            key = tuple(e.get(a) for a in c["group_by"])
-            if None not in key:
-                groups.setdefault(key, []).append(e["box"])
-        for bs in groups.values():
-            a = np.array(bs)
-            boxes.append((cls_id, a[:, 0].min(), a[:, 1].min(), a[:, 2].max(), a[:, 3].max()))
+        for rule in c["rules"]:
+            boxes += rule_boxes(cls_id, rule, elements)
+    return boxes
+
+
+def rule_boxes(cls_id, c, elements):
+    boxes = []
+    sel = [e for e in elements if e["role"] in c["roles"] and matches(e, c["where"])]
+    if not c["group_by"]:
+        return [(cls_id, *e["box"]) for e in sel]
+    groups = {}
+    for e in sel:
+        key = tuple(e.get(a) for a in c["group_by"])
+        if None not in key:
+            groups.setdefault(key, []).append(e["box"])
+    for bs in groups.values():
+        a = np.array(bs)
+        boxes.append((cls_id, a[:, 0].min(), a[:, 1].min(), a[:, 2].max(), a[:, 3].max()))
     return boxes
 
 
